@@ -156,6 +156,15 @@ function initAuthPage() {
     signupForm?.addEventListener('submit', handleSignup);
 }
 
+function requireAuth() {
+    const user = getCurrentUser();
+    if (!user) {
+        window.location.href = 'index.html';
+        return false;
+    }
+    return true;
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     updateAuthNav();
     const user = getCurrentUser();
@@ -166,5 +175,7 @@ window.addEventListener('DOMContentLoaded', () => {
             return;
         }
         initAuthPage();
+    } else {
+        requireAuth();
     }
 });
