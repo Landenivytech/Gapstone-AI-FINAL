@@ -3,6 +3,7 @@ const mysql = require('mysql2/promise');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,9 +24,51 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname)));
 
-async function ensureSongsSchema() {
+function generateSalt() {
+    return crypto.randomBytes(16).toString('hex');
+}
+
+function hashPassword(password, salt) {
+    return crypto.scryptSync(password, salt, 64).toString('hex');
+}
+
+function verifyPassword(password, salt, hash) {
+    try {
+        return hashPassword(password, salt) === hash;
+    } catch (error) {
+        return false;
+    }
+}
+
+async function ensureDatabaseSchema() {
     const connection = await pool.getConnection();
     try {
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(50) NOT NULL UNIQUE,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                password_hash CHAR(128) NOT NULL,
+                salt CHAR(32) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB;
+        `);
+
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS user_data (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                data_key VARCHAR(100) NOT NULL,
+                data_value TEXT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY user_data_unique (user_id, data_key),
+                CONSTRAINT fk_user_data_user FOREIGN KEY (user_id)
+                    REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB;
+        `);
+
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS songs (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -37,18 +80,6 @@ async function ensureSongsSchema() {
                 UNIQUE KEY unique_song_title_artist (title, artist)
             ) ENGINE=InnoDB;
         `);
-        const [rows] = await connection.execute(
-            `SELECT COUNT(*) AS count
-             FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = ?
-               AND TABLE_NAME = 'songs'
-               AND COLUMN_NAME = 'description'`,
-            [dbConfig.database]
-        );
-
-        if (rows[0].count === 0) {
-            await connection.execute('ALTER TABLE songs ADD COLUMN description TEXT NULL');
-        }
     } finally {
         connection.release();
     }
@@ -68,6 +99,195 @@ app.get('/api/songs', async (req, res) => {
     } catch (error) {
         console.error('Failed to fetch songs:', error);
         res.status(500).json({ error: 'Failed to fetch songs' });
+    }
+});
+
+app.post('/api/auth/register', async (req, res) => {
+    const { username, email, password } = req.body;
+    if (!username || !email || !password) {
+        return res.status(400).json({ error: 'Username, email, and password are required' });
+    }
+
+    const cleanUsername = username.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanUsername || !cleanEmail || cleanUsername.length > 50 || cleanEmail.length > 255) {
+        return res.status(400).json({ error: 'Invalid username or email' });
+    }
+
+    const salt = generateSalt();
+    const passwordHash = hashPassword(password, salt);
+
+    try {
+        const [result] = await pool.execute(
+            `INSERT INTO users (username, email, password_hash, salt)
+             VALUES (?, ?, ?, ?)`,
+            [cleanUsername, cleanEmail, passwordHash, salt]
+        );
+
+        res.status(201).json({
+            userId: result.insertId,
+            username: cleanUsername
+        });
+    } catch (error) {
+        console.error('Failed to register user:', error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ error: 'Username or email already exists' });
+        }
+        res.status(500).json({ error: 'Failed to register user' });
+    }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    try {
+        const [rows] = await pool.execute(
+            'SELECT id, username, password_hash, salt FROM users WHERE username = ?',
+            [username.trim()]
+        );
+
+        if (!rows.length) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        const user = rows[0];
+        if (!verifyPassword(password, user.salt, user.password_hash)) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        res.json({ userId: user.id, username: user.username });
+    } catch (error) {
+        console.error('Failed to authenticate user:', error);
+        res.status(500).json({ error: 'Failed to authenticate user' });
+    }
+});
+
+app.get('/api/users', async (req, res) => {
+    try {
+        const users = await queryDatabase(
+            'SELECT id, username, email, created_at FROM users ORDER BY created_at DESC'
+        );
+        res.json(users);
+    } catch (error) {
+        console.error('Failed to fetch users:', error);
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
+
+app.get('/api/users/:userId', async (req, res) => {
+    const userId = parseInt(req.params.userId, 10);
+    if (Number.isNaN(userId)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    try {
+        const [rows] = await pool.execute(
+            'SELECT id, username, email, created_at, updated_at FROM users WHERE id = ?',
+            [userId]
+        );
+
+        if (!rows.length) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json(rows[0]);
+    } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+        res.status(500).json({ error: 'Failed to fetch user profile' });
+    }
+});
+
+app.post('/api/users/:userId/data', async (req, res) => {
+    const userId = parseInt(req.params.userId, 10);
+    const { key, value } = req.body;
+
+    if (Number.isNaN(userId) || !key) {
+        return res.status(400).json({ error: 'Invalid user ID or key' });
+    }
+
+    try {
+        await pool.execute(
+            `INSERT INTO user_data (user_id, data_key, data_value)
+             VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE data_value = VALUES(data_value), updated_at = CURRENT_TIMESTAMP`,
+            [userId, key, value || null]
+        );
+        res.json({ success: true, message: 'User data saved' });
+    } catch (error) {
+        console.error('Failed to save user data:', error);
+        res.status(500).json({ error: 'Failed to save user data' });
+    }
+});
+
+app.get('/api/users/:userId/data', async (req, res) => {
+    const userId = parseInt(req.params.userId, 10);
+    if (Number.isNaN(userId)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    try {
+        const rows = await queryDatabase(
+            'SELECT data_key AS key, data_value AS value FROM user_data WHERE user_id = ?',
+            [userId]
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error('Failed to fetch user data:', error);
+        res.status(500).json({ error: 'Failed to fetch user data' });
+    }
+});
+
+app.get('/api/users/:userId/data/:key', async (req, res) => {
+    const userId = parseInt(req.params.userId, 10);
+    const { key } = req.params;
+
+    if (Number.isNaN(userId) || !key) {
+        return res.status(400).json({ error: 'Invalid user ID or key' });
+    }
+
+    try {
+        const [rows] = await pool.execute(
+            'SELECT data_key AS key, data_value AS value FROM user_data WHERE user_id = ? AND data_key = ?',
+            [userId, key]
+        );
+
+        if (!rows.length) {
+            return res.status(404).json({ error: 'Data not found' });
+        }
+
+        res.json(rows[0]);
+    } catch (error) {
+        console.error('Failed to fetch user data item:', error);
+        res.status(500).json({ error: 'Failed to fetch user data item' });
+    }
+});
+
+app.delete('/api/users/:userId/data/:key', async (req, res) => {
+    const userId = parseInt(req.params.userId, 10);
+    const { key } = req.params;
+
+    if (Number.isNaN(userId) || !key) {
+        return res.status(400).json({ error: 'Invalid user ID or key' });
+    }
+
+    try {
+        const [result] = await pool.execute(
+            'DELETE FROM user_data WHERE user_id = ? AND data_key = ?',
+            [userId, key]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Data not found' });
+        }
+
+        res.json({ success: true, message: 'User data deleted' });
+    } catch (error) {
+        console.error('Failed to delete user data item:', error);
+        res.status(500).json({ error: 'Failed to delete user data item' });
     }
 });
 
@@ -199,7 +419,7 @@ app.use((req, res) => {
 
 (async function startServer() {
     try {
-        await ensureSongsSchema();
+        await ensureDatabaseSchema();
         await pool.getConnection();
         console.log('Connected to MySQL database.');
         app.listen(PORT, () => {
