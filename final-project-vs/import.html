@@ -13,6 +13,7 @@
                 <li><a href="leaderboard.html">Leaderboard</a></li>
                 <li><a class="active" href="import.html">Import</a></li>
                 <li><a href="info.html">Info</a></li>
+                <li id="authNav"><a href="index.html">Login</a></li>
             </ul>
         </nav>
         <header>
@@ -54,33 +55,6 @@
     </div>
 
     <script src="script.js"></script>
-    <script>
-        // Check database connection on page load
-        window.addEventListener('DOMContentLoaded', async function() {
-            await checkDatabaseConnection();
-        });
-
-        async function checkDatabaseConnection() {
-            const statusDiv = document.getElementById('dbStatus');
-            const statusIcon = document.getElementById('statusIcon');
-            const statusText = document.getElementById('statusText');
-
-            try {
-                const response = await fetch('/api/stats');
-                if (response.ok) {
-                    statusDiv.className = 'db-status connected';
-                    statusIcon.textContent = '✅';
-                    statusText.textContent = 'Database connected - songs will be saved permanently';
-                } else {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-            } catch (error) {
-                statusDiv.className = 'db-status error';
-                statusIcon.textContent = '❌';
-                statusText.textContent = 'Database not available - imports will fail';
-                console.error('Database connection check failed:', error);
-            }
-        }
-    </script>
+    <script src="auth.js"></script>
 </body>
 </html>

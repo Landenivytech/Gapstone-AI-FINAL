@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Sign Up</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body data-auth-page="true">
+    <div class="container auth-page">
+        <nav>
+            <ul>
+                <li><a href="leaderboard.html">Leaderboard</a></li>
+                <li><a href="import.html">Import</a></li>
+                <li><a href="info.html">Info</a></li>
+                <li id="authNav"><a href="index.html">Login</a></li>
+            </ul>
+        </nav>
+        <div class="auth-card">
+            <h1>Welcome back</h1>
+            <p>Log in to save and load your data, or sign up to create a new user account.</p>
+            <div class="auth-toggle">
+                <button type="button" id="loginTab" data-section="loginSection" class="active">Login</button>
+                <button type="button" id="signupTab" data-section="signupSection">Sign Up</button>
+            </div>
+            <div id="authMessage" class="auth-message"></div>
+            <div id="loginSection" class="auth-section active">
+                <form id="loginForm">
+                    <label for="loginUsername">Username</label>
+                    <input type="text" id="loginUsername" name="username" required placeholder="Enter your username">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" name="password" required placeholder="Enter your password">
+                    <button type="submit" class="submit-btn">Login</button>
+                </form>
+            </div>
+            <div id="signupSection" class="auth-section">
+                <form id="signupForm">
+                    <label for="signupUsername">Username</label>
+                    <input type="text" id="signupUsername" name="username" required placeholder="Choose a username">
+                    <label for="signupEmail">Email</label>
+                    <input type="email" id="signupEmail" name="email" required placeholder="Enter your email">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" name="password" required placeholder="Choose a password">
+                    <label for="signupConfirmPassword">Confirm Password</label>
+                    <input type="password" id="signupConfirmPassword" name="confirmPassword" required placeholder="Confirm your password">
+                    <button type="submit" class="submit-btn">Sign Up</button>
+                </form>
+            </div>
+            <div class="auth-footer">
+                <p>After signing up, you will be redirected to the leaderboard.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+</body>
+</html>
