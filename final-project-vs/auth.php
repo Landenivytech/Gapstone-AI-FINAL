@@ -1,6 +1,27 @@
 <?php
 session_start();
 
+// Only allow POST requests for API actions
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    header('Allow: POST');
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Method not allowed. Use POST.']);
+    exit;
+}
+
+// Set content type for all responses
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+// Handle preflight OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 // Database configuration
 $dbConfig = array(
     'host' => getenv('DB_HOST') ?: 'localhost',
@@ -9,12 +30,20 @@ $dbConfig = array(
     'database' => getenv('DB_NAME') ?: 'final_ai'
 );
 
-// Create database connection
-$conn = new mysqli($dbConfig['host'], $dbConfig['user'], $dbConfig['password'], $dbConfig['database']);
+// Create database connection (without specifying database first)
+$conn = new mysqli($dbConfig['host'], $dbConfig['user'], $dbConfig['password']);
 
 if ($conn->connect_error) {
-    die(json_encode(['error' => 'Database connection failed: ' . $conn->connect_error]));
+    http_response_code(500);
+    echo json_encode(['error' => 'Database connection failed: ' . $conn->connect_error]);
+    exit;
 }
+
+// Create database if it doesn't exist
+$conn->query("CREATE DATABASE IF NOT EXISTS `{$dbConfig['database']}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+// Now connect to the specific database
+$conn->select_db($dbConfig['database']);
 
 // Set charset to utf8mb4
 $conn->set_charset("utf8mb4");
@@ -26,16 +55,13 @@ function generateSalt() {
 
 // Helper function to hash password
 function hashPassword($password, $salt) {
-    return bin2hex(scrypt($password, $salt, 64, 16, 1, 64));
+    // Note: password_hash generates its own salt, so the $salt parameter is not used
+    return password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
 }
 
 // Helper function to verify password
 function verifyPassword($password, $salt, $hash) {
-    try {
-        return hashPassword($password, $salt) === $hash;
-    } catch (Exception $e) {
-        return false;
-    }
+    return password_verify($password, $hash);
 }
 
 // Ensure database schema exists
@@ -91,9 +117,12 @@ if ($action === 'register') {
     handleLogout();
 } elseif ($action === 'get-user') {
     getUser();
+} elseif ($action === 'test') {
+    // Simple test endpoint
+    echo json_encode(['status' => 'PHP is working', 'method' => $_SERVER['REQUEST_METHOD']]);
 } else {
     http_response_code(400);
-    echo json_encode(['error' => 'Invalid action']);
+    echo json_encode(['error' => 'Invalid action. Available actions: register, login, logout, get-user, test']);
 }
 
 // Register user
@@ -125,11 +154,19 @@ function handleRegister() {
     $salt = generateSalt();
     $passwordHash = hashPassword($password, $salt);
     
+    if (!$passwordHash) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to hash password']);
+        error_log("Password hash failed for user: $username");
+        return;
+    }
+    
     $stmt = $conn->prepare("INSERT INTO users (username, email, password_hash, salt) VALUES (?, ?, ?, ?)");
     
     if (!$stmt) {
         http_response_code(500);
-        echo json_encode(['error' => 'Prepare failed: ' . $conn->error]);
+        echo json_encode(['error' => 'Database prepare failed: ' . $conn->error]);
+        error_log("Prepare failed: " . $conn->error);
         return;
     }
     
@@ -152,6 +189,7 @@ function handleRegister() {
         } else {
             http_response_code(500);
             echo json_encode(['error' => 'Failed to register user: ' . $conn->error]);
+            error_log("Execute failed: " . $conn->error);
         }
     }
     
