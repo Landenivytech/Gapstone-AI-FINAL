@@ -25,7 +25,8 @@
             </div>
             <div id="authMessage" class="auth-message"></div>
             <div id="loginSection" class="auth-section active">
-                <form id="loginForm">
+                <form id="loginForm" action="auth.php" method="POST">
+                    <input type="hidden" name="action" value="login">
                     <label for="loginUsername">Username</label>
                     <input type="text" id="loginUsername" name="username" required placeholder="Enter your username">
                     <label for="loginPassword">Password</label>
@@ -34,7 +35,8 @@
                 </form>
             </div>
             <div id="signupSection" class="auth-section">
-                <form id="signupForm">
+                <form id="signupForm" action="auth.php" method="POST">
+                    <input type="hidden" name="action" value="register">
                     <label for="signupUsername">Username</label>
                     <input type="text" id="signupUsername" name="username" required placeholder="Choose a username">
                     <label for="signupEmail">Email</label>
