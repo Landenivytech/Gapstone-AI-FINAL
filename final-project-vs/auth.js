@@ -143,12 +143,18 @@ async function handleSignup(event) {
         formData.append('email', email);
         formData.append('password', password);
 
+        console.log('Sending request to auth.php...');
         const response = await fetch('auth.php', {
             method: 'POST',
             body: formData
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+
         const data = await response.json();
+        console.log('Response data:', data);
+
         if (!response.ok) {
             return showAuthMessage(data.error || 'Sign-up failed. Please try again.', 'error');
         }
@@ -166,11 +172,13 @@ function initAuthPage() {
     const signupTab = document.getElementById('signupTab');
     const loginForm = document.getElementById('loginForm');
     const signupForm = document.getElementById('signupForm');
+    const testConnectionBtn = document.getElementById('testConnection');
 
     loginTab?.addEventListener('click', () => showAuthSection('loginSection'));
     signupTab?.addEventListener('click', () => showAuthSection('signupSection'));
     loginForm?.addEventListener('submit', handleLogin);
     signupForm?.addEventListener('submit', handleSignup);
+    testConnectionBtn?.addEventListener('click', testConnection);
 }
 
 function requireAuth() {
@@ -180,6 +188,32 @@ function requireAuth() {
         return false;
     }
     return true;
+}
+
+async function testConnection() {
+    try {
+        const formData = new FormData();
+        formData.append('action', 'test');
+
+        console.log('Testing connection to auth.php...');
+        const response = await fetch('auth.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        console.log('Test response status:', response.status);
+        const data = await response.json();
+        console.log('Test response data:', data);
+
+        if (response.ok) {
+            showAuthMessage('Connection successful! PHP is working.', 'success');
+        } else {
+            showAuthMessage('Connection failed: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Test connection error:', error);
+        showAuthMessage('Connection failed: ' + error.message, 'error');
+    }
 }
 
 window.addEventListener('DOMContentLoaded', () => {

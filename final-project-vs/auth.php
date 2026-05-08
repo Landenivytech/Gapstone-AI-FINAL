@@ -1,4 +1,11 @@
 <?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Don't display errors in output, but log them
+
+// Start output buffering to catch any errors
+ob_start();
+
 session_start();
 
 // Only allow POST requests for API actions
@@ -31,22 +38,32 @@ $dbConfig = array(
 );
 
 // Create database connection (without specifying database first)
-$conn = new mysqli($dbConfig['host'], $dbConfig['user'], $dbConfig['password']);
+try {
+    $conn = new mysqli($dbConfig['host'], $dbConfig['user'], $dbConfig['password']);
 
-if ($conn->connect_error) {
+    if ($conn->connect_error) {
+        throw new Exception('Database connection failed: ' . $conn->connect_error);
+    }
+
+    // Create database if it doesn't exist
+    if (!$conn->query("CREATE DATABASE IF NOT EXISTS `{$dbConfig['database']}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")) {
+        throw new Exception('Failed to create database: ' . $conn->error);
+    }
+
+    // Now connect to the specific database
+    if (!$conn->select_db($dbConfig['database'])) {
+        throw new Exception('Failed to select database: ' . $conn->error);
+    }
+
+    // Set charset to utf8mb4
+    if (!$conn->set_charset("utf8mb4")) {
+        throw new Exception('Failed to set charset: ' . $conn->error);
+    }
+} catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['error' => 'Database connection failed: ' . $conn->connect_error]);
+    echo json_encode(['error' => 'Database setup failed: ' . $e->getMessage()]);
     exit;
 }
-
-// Create database if it doesn't exist
-$conn->query("CREATE DATABASE IF NOT EXISTS `{$dbConfig['database']}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-
-// Now connect to the specific database
-$conn->select_db($dbConfig['database']);
-
-// Set charset to utf8mb4
-$conn->set_charset("utf8mb4");
 
 // Helper function to generate salt
 function generateSalt() {
@@ -103,26 +120,45 @@ function ensureDatabaseSchema() {
     }
 }
 
-// Initialize database schema
+// Initialize database schema (only if database connection succeeded)
 ensureDatabaseSchema();
 
-// Handle different action types
-$action = isset($_POST['action']) ? $_POST['action'] : (isset($_GET['action']) ? $_GET['action'] : '');
+try {
+    // Handle different action types
+    $action = isset($_POST['action']) ? $_POST['action'] : (isset($_GET['action']) ? $_GET['action'] : '');
 
-if ($action === 'register') {
-    handleRegister();
-} elseif ($action === 'login') {
-    handleLogin();
-} elseif ($action === 'logout') {
-    handleLogout();
-} elseif ($action === 'get-user') {
-    getUser();
-} elseif ($action === 'test') {
-    // Simple test endpoint
-    echo json_encode(['status' => 'PHP is working', 'method' => $_SERVER['REQUEST_METHOD']]);
-} else {
-    http_response_code(400);
-    echo json_encode(['error' => 'Invalid action. Available actions: register, login, logout, get-user, test']);
+    if ($action === 'register') {
+        handleRegister();
+    } elseif ($action === 'login') {
+        handleLogin();
+    } elseif ($action === 'logout') {
+        handleLogout();
+    } elseif ($action === 'get-user') {
+        getUser();
+    } elseif ($action === 'test') {
+        // Simple test endpoint that doesn't require database
+        echo json_encode([
+            'status' => 'PHP is working',
+            'method' => $_SERVER['REQUEST_METHOD'],
+            'timestamp' => date('Y-m-d H:i:s'),
+            'database_connected' => true
+        ]);
+    } else {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid action. Available actions: register, login, logout, get-user, test']);
+    }
+
+    $conn->close();
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Unexpected error: ' . $e->getMessage()]);
+}
+
+// Clean output buffer and ensure we only send JSON
+$content = ob_get_clean();
+if (!empty($content)) {
+    // If there's any buffered output, it might be an error
+    error_log("Buffered output: " . $content);
 }
 
 // Register user
@@ -266,5 +302,11 @@ function getUser() {
     }
 }
 
-$conn->close();
+// Clean output buffer and ensure we only send JSON
+$content = ob_get_clean();
+if (!empty($content)) {
+    // If there's any buffered output, it might be an error
+    error_log("Buffered output: " . $content);
+}
 ?>
+
