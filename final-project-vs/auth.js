@@ -102,7 +102,15 @@ async function handleLogin(event) {
             body: formData
         });
 
-        const data = await response.json();
+        const responseText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('Invalid JSON response from auth.php:', responseText);
+            throw new Error('Invalid server response. Check auth.php output and browser console.');
+        }
+
         if (!response.ok) {
             return showAuthMessage(data.error || 'Login failed. Please check your credentials.', 'error');
         }
@@ -152,7 +160,15 @@ async function handleSignup(event) {
         console.log('Response status:', response.status);
         console.log('Response headers:', response.headers);
 
-        const data = await response.json();
+        const responseText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('Invalid JSON response from auth.php:', responseText);
+            throw new Error('Invalid server response. Check auth.php output and browser console.');
+        }
+
         console.log('Response data:', data);
 
         if (!response.ok) {
@@ -202,7 +218,14 @@ async function testConnection() {
         });
 
         console.log('Test response status:', response.status);
-        const data = await response.json();
+        const responseText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('Invalid JSON response from auth.php:', responseText);
+            throw new Error('Invalid server response for test connection.');
+        }
         console.log('Test response data:', data);
 
         if (response.ok) {

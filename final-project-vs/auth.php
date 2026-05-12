@@ -3,10 +3,8 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 0); // Don't display errors in output, but log them
 
-// Start output buffering to catch any errors
-ob_start();
-
 session_start();
+ob_start();
 
 // Only allow POST requests for API actions
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -16,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['error' => 'Method not allowed. Use POST.']);
     exit;
 }
-
+// blah blah
 // Set content type for all responses
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -155,10 +153,14 @@ try {
 }
 
 // Clean output buffer and ensure we only send JSON
-$content = ob_get_clean();
-if (!empty($content)) {
-    // If there's any buffered output, it might be an error
-    error_log("Buffered output: " . $content);
+if (ob_get_level() > 0) {
+    $content = ob_get_contents();
+    ob_end_clean();
+    if (!empty($content)) {
+        // If there's any buffered output, it might be an error
+        error_log("Buffered output: " . $content);
+        echo $content;
+    }
 }
 
 // Register user
@@ -302,11 +304,5 @@ function getUser() {
     }
 }
 
-// Clean output buffer and ensure we only send JSON
-$content = ob_get_clean();
-if (!empty($content)) {
-    // If there's any buffered output, it might be an error
-    error_log("Buffered output: " . $content);
-}
-?>
+
 
