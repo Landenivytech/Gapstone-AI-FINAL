@@ -26,7 +26,7 @@ function updateAuthNav() {
 
     const user = getCurrentUser();
     if (user && user.username) {
-        authNav.innerHTML = `<a href="#" id="logoutLink">Logout (${user.username})</a>`;
+        authNav.innerHTML = `<button type="button" id="logoutLink">Logout (${user.username})</button>`;
         const logoutLink = document.getElementById('logoutLink');
         if (logoutLink) {
             logoutLink.addEventListener('click', logoutUser);
@@ -198,6 +198,12 @@ function initAuthPage() {
 }
 
 function requireAuth() {
+    const authRequiredPages = ['leaderboard.html', 'import.html'];
+    const currentPage = window.location.pathname.split('/').pop();
+    if (!authRequiredPages.includes(currentPage)) {
+        return true;
+    }
+
     const user = getCurrentUser();
     if (!user) {
         window.location.href = 'index.html';
