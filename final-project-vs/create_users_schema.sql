@@ -28,3 +28,12 @@ CREATE TABLE IF NOT EXISTS `user_data` (
     CONSTRAINT `fk_user_data_user` FOREIGN KEY (`user_id`)
         REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS `songs` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `title` VARCHAR(255) NOT NULL,
+    `artist` VARCHAR(255) NOT NULL,
+    `listens` INT NOT NULL DEFAULT 0,
+    `description` TEXT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `unique_song_title_artist` (`title`, `artist`)
+) ENGINE=InnoDB;
