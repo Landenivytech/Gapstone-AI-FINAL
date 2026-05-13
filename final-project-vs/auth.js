@@ -198,7 +198,7 @@ function initAuthPage() {
 }
 
 function requireAuth() {
-    const authRequiredPages = ['leaderboard.html', 'import.html'];
+    const authRequiredPages = ['leaderboard.html', 'import.html', 'info.html'];
     const currentPage = window.location.pathname.split('/').pop();
     if (!authRequiredPages.includes(currentPage)) {
         return true;
