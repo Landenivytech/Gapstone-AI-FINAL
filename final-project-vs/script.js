@@ -36,7 +36,7 @@ async function getImportedData() {
 
     // Try to get from database
     try {
-        const response = await fetch('/api/songs');
+        const response = await fetch('songs.php');
         if (response.ok) {
             dbData = await response.json();
             console.log('✅ Loaded data from database:', dbData.length, 'songs');
@@ -90,7 +90,7 @@ async function getImportedData() {
 async function saveImportedData(data) {
     // Always try to save to database first
     try {
-        const response = await fetch('/api/songs', {
+        const response = await fetch('songs.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ songs: data })
@@ -122,7 +122,7 @@ async function addImportedSongs(newSongs) {
 async function clearImportedData() {
     // Always try to clear from database first
     try {
-        const response = await fetch('/api/songs', { method: 'DELETE' });
+        const response = await fetch('songs.php', { method: 'DELETE' });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(`Database clear failed: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`);
@@ -147,7 +147,7 @@ async function clearImportedData() {
 async function getStats() {
     // Always try to get stats from database first
     try {
-        const response = await fetch('/api/stats');
+        const response = await fetch('stats.php');
         if (!response.ok) {
             throw new Error(`Database stats failed: ${response.status} ${response.statusText}`);
         }
@@ -505,7 +505,7 @@ function cancelEditSong() {
 }
 
 async function updateSong(songId, updatedFields) {
-    const response = await fetch(`/api/songs/${encodeURIComponent(songId)}`, {
+    const response = await fetch('songs.php', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedFields)
