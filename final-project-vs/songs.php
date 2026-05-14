@@ -171,7 +171,7 @@ function handlePostSongs() {
                 throw new Exception("Prepare failed: " . $conn->error);
             }
             
-            $stmt->bind_param("ssds", $title, $artist, $listens, $description);
+            $stmt->bind_param("ssis", $title, $artist, $listens, $description);
             
             if ($stmt->execute()) {
                 $savedCount++;
