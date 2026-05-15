@@ -506,7 +506,7 @@ function cancelEditSong() {
 
 async function updateSong(songId, updatedFields) {
     const response = await fetch('songs.php', {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedFields)
     });

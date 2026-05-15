@@ -6,6 +6,10 @@ ini_set('display_errors', 0);
 session_start();
 ob_start();
 
+// Variables to store imported song data from users
+$userImportData = [];
+$lastImportSummary = '';
+
 // Set content type and CORS headers
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -136,8 +140,30 @@ function handleGetSongs() {
 // Handle POST request - save songs
 function handlePostSongs() {
     global $conn;
+    global $userImportData;
+    global $lastImportSummary;
     
     $input = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($input)) {
+        $input = [];
+    }
+
+    if (isset($_POST['songs'])) {
+        $postSongs = json_decode($_POST['songs'], true);
+        if (is_array($postSongs)) {
+            $input['songs'] = $postSongs;
+        }
+    }
+
+    if (empty($input['songs']) && isset($_POST['title']) && isset($_POST['artist'])) {
+        $input['songs'] = [[
+            'title' => $_POST['title'],
+            'artist' => $_POST['artist'],
+            'listens' => isset($_POST['listens']) ? intval($_POST['listens']) : 0,
+            'description' => isset($_POST['description']) ? $_POST['description'] : null
+        ]];
+    }
+
     $songs = is_array($input['songs']) ? $input['songs'] : [];
     
     if (empty($songs)) {
@@ -148,6 +174,7 @@ function handlePostSongs() {
     
     try {
         $savedCount = 0;
+        $importedSongs = [];
         
         foreach ($songs as $song) {
             $title = isset($song['title']) ? trim($song['title']) : '';
@@ -175,15 +202,27 @@ function handlePostSongs() {
             
             if ($stmt->execute()) {
                 $savedCount++;
+                $importedSongs[] = [
+                    'title' => $title,
+                    'artist' => $artist,
+                    'listens' => $listens,
+                    'description' => $description
+                ];
             }
             
             $stmt->close();
         }
         
+        $userImportData = $importedSongs;
+        $_SESSION['importedSongs'] = $importedSongs;
+        $lastImportSummary = count($importedSongs) . ' song(s) imported';
+        
         echo json_encode([
             'success' => true,
             'message' => 'Songs saved successfully',
-            'savedCount' => $savedCount
+            'savedCount' => $savedCount,
+            'importedSongs' => $importedSongs,
+            'importSummary' => $lastImportSummary
         ]);
     } catch (Exception $e) {
         http_response_code(500);
