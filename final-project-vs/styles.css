@@ -862,7 +862,6 @@ body {
     animation: gradientBG 18s ease infinite;
     position: relative;
     min-height: 100vh;
-    overflow: hidden;
 }
 
 /* soft lighter-blue moving shapes (front layer) */
