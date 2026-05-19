@@ -5,18 +5,21 @@
 }
 
 html {
+    width: 100%;
     overflow-x: hidden;
 }
 
 body {
+    width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     position: relative;
-    overflow-x: hidden;
     background: linear-gradient(270deg, #0f2027 0%, #203a43 25%, #2c5364 50%, #203a43 75%, #0f2027 100%);
     background-size: 1200% 1200%;
     animation: gradientBG 18s ease infinite;
     background-attachment: fixed;
-    min-height: 100vh;
     padding: 20px;
     color: #e8e8e8;
 }
@@ -823,13 +826,13 @@ tbody tr:hover {
     animation: gradientBG 12s ease infinite;
     position: relative;
     min-height: 100vh;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 .animated-bg::before {
     content: '';
     position: absolute;
-    inset: -30%;
+    inset: 0;
     background-image: radial-gradient(circle at 10% 20%, rgba(255,255,255,0.04), transparent 8%),
                       radial-gradient(circle at 80% 80%, rgba(255,255,255,0.03), transparent 10%),
                       radial-gradient(circle at 50% 50%, rgba(255,255,255,0.02), transparent 12%);
@@ -875,7 +878,7 @@ body::before,
 .animated-bg::before {
     content: '';
     position: absolute;
-    inset: -25%;
+    inset: 0;
     background-image:
         radial-gradient(circle at 10% 20%, rgba(173,216,230,0.14) 0%, transparent 24%),
         radial-gradient(circle at 35% 65%, rgba(135,206,250,0.12) 0%, transparent 22%),
@@ -895,7 +898,7 @@ body::after,
 .animated-bg::after {
     content: '';
     position: absolute;
-    inset: -35%;
+    inset: 0;
     background-image:
         radial-gradient(circle at 20% 30%, rgba(173,216,230,0.09) 0%, transparent 26%),
         radial-gradient(circle at 65% 80%, rgba(135,206,250,0.07) 0%, transparent 24%);
