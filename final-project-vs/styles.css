@@ -7,13 +7,14 @@
 html {
     width: 100%;
     overflow-x: hidden;
+    /* overflow-y: auto; allow vertical scrolling while hiding scrollbar appearance */
 }
 
 body {
     width: 100%;
     min-height: 100vh;
     overflow-x: hidden;
-    overflow-y: auto;
+    /* overflow-y: auto; restore scrolling */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     position: relative;
     background: linear-gradient(270deg, #0f2027 0%, #203a43 25%, #2c5364 50%, #203a43 75%, #0f2027 100%);
@@ -933,3 +934,19 @@ body::after,
     50% { background-position: 12% 32%, -8% 48%; transform: translate(-6%, 4%) rotate(6deg); }
     100% { background-position: 0% 0%, 0% 0%; transform: translate(0,0) rotate(0deg); }
 }
+
+/* Use default scrollbars (no custom hiding) */
+/* Hide scrollbars but keep scrolling functional */
+/* WebKit browsers (Chrome, Safari, Edge Chromium) */
+/* html::-webkit-scrollbar {
+    width: 0; /* hide scrollbar */
+    /* height: 0; */
+/* } */
+/* Firefox */
+/* html { */
+    /* scrollbar-width: none; hides scrollbar in Firefox */
+/* } */
+/* IE/Edge (legacy) - force overflow style */
+/* body { */
+    /* -ms-overflow-style: none; IE and Edge */
+/* }  */
