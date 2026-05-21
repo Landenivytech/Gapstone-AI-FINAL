@@ -621,10 +621,29 @@ tbody tr:hover {
 }
 
 .edit-btn {
-    background: #1c7ed6;
+    /* Use the default primary button gradient (swapped) */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .edit-btn:hover {
+    /* Keep hover behavior consistent with other buttons */
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.delete-btn {
+    /* Previously the edit button color — now applied to delete */
+    padding: 8px 14px;
+    margin: 0 4px 4px 0;
+    font-size: 0.95em;
+    background: #1c7ed6;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.delete-btn:hover {
     background: #1971c2;
 }
 

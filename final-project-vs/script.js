@@ -478,7 +478,10 @@ async function displayDataInfo() {
                         <td>${song.artist}</td>
                         <td>${song.description || 'N/A'}</td>
                         <td>${Number(song.listens).toLocaleString()}</td>
-                        <td><button type="button" onclick="startEditSong(${index})" class="edit-btn">Edit</button></td>
+                        <td>
+                            <button type="button" onclick="startEditSong(${index})" class="edit-btn">Edit</button>
+                            <button type="button" onclick="deleteSong(${index})" class="delete-btn">Delete</button>
+                        </td>
                     </tr>
                 `;
             }
@@ -576,6 +579,49 @@ async function saveEditedSong(index) {
     } catch (error) {
         console.error('❌ Failed to save edit:', error);
         alert(`❌ Could not save changes: ${error.message}`);
+    }
+}
+
+async function deleteSong(index) {
+    const song = loadedData[index];
+    if (!song) {
+        alert('Unable to delete: song not found');
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to delete "${song.title}" by ${song.artist}? This cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        if (song.id && song.id.toString().startsWith('local-')) {
+            const localData = JSON.parse(localStorage.getItem('importedData') || '[]');
+            const updatedLocal = localData.filter(item => item.id !== song.id);
+            localStorage.setItem('importedData', JSON.stringify(updatedLocal));
+            alert('✅ Local song deleted successfully.');
+        } else {
+            const response = await fetch('songs.php', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: song.id })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Delete failed with status ${response.status}`);
+            }
+
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.error || 'Delete failed');
+            }
+            alert('✅ Song deleted successfully from the database.');
+        }
+
+        await displayDataInfo();
+    } catch (error) {
+        console.error('❌ Failed to delete song:', error);
+        alert(`❌ Could not delete song: ${error.message}`);
     }
 }
 

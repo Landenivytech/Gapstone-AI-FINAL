@@ -309,10 +309,48 @@ function handlePutSongs() {
 // Handle DELETE request - clear all songs
 function handleDeleteSongs() {
     global $conn;
-    
+    $input = json_decode(file_get_contents('php://input'), true);
+
     try {
+        if (is_array($input) && (!empty($input['id']) || (!empty($input['title']) && !empty($input['artist'])))) {
+            if (!empty($input['id'])) {
+                $id = intval($input['id']);
+                $stmt = $conn->prepare("DELETE FROM songs WHERE id = ?");
+                if (!$stmt) {
+                    throw new Exception("Prepare failed: " . $conn->error);
+                }
+                $stmt->bind_param('i', $id);
+            } else {
+                $title = trim($input['title']);
+                $artist = trim($input['artist']);
+                $stmt = $conn->prepare("DELETE FROM songs WHERE title = ? AND artist = ?");
+                if (!$stmt) {
+                    throw new Exception("Prepare failed: " . $conn->error);
+                }
+                $stmt->bind_param('ss', $title, $artist);
+            }
+
+            if (!$stmt->execute()) {
+                throw new Exception("Execute failed: " . $stmt->error);
+            }
+
+            if ($stmt->affected_rows === 0) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Song not found']);
+            } else {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Song deleted successfully',
+                    'rowsAffected' => $stmt->affected_rows
+                ]);
+            }
+
+            $stmt->close();
+            return;
+        }
+
         $result = $conn->query("DELETE FROM songs");
-        
+
         if (!$result) {
             throw new Exception("Delete failed: " . $conn->error);
         }
@@ -324,7 +362,7 @@ function handleDeleteSongs() {
         ]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Failed to clear songs: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Failed to delete song(s): ' . $e->getMessage()]);
     }
 }
 ?>
